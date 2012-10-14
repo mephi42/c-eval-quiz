@@ -1,0 +1,54 @@
+#!/usr/bin/perl -w
+use strict;
+use warnings;
+use File::Spec::Functions;
+use File::Temp qw( &tempdir );
+use autodie qw( :all );
+
+my $variant = shift or die;
+my $quiz = shift or die;
+my $answer = shift or die;
+
+sub gen {
+  my $question = `./gen-expression`;
+  if ( $? ) { die './gen-expression failed'; }
+
+  my $dir = tempdir();
+  my $cfile = catfile( $dir, 'answer.c' );
+  my $binfile = catfile( $dir, 'answer' );
+  open my $fh, '>', $cfile;
+  print $fh <<"HERE";
+#include <stdio.h>
+int main() {
+  ${question}
+  return 0;
+}
+HERE
+  close $fh;
+  system( "gcc -o ${binfile} ${cfile}" );
+  my $answer = `${binfile}`;
+  if ( $? ) { die "${binfile} failed" }
+  chomp( $question );
+  chomp( $answer );
+  return ( $question, $answer );
+}
+
+my @qas;
+for( my $i = 1; $i <= 3; $i++ ) {
+  my @qa = ( $i, gen() );
+  push @qas, \@qa;
+}
+
+{
+  open my $fh, '>>', $quiz;
+  print $fh "Вариант ${variant}\n";
+  print $fh join( "\n\n", map { $_->[0] . ".\n" . $_->[1] } @qas );
+  print $fh "\n" . ( '-' x 80 ) . "\n";
+}
+
+{
+  open my $fh, '>>', $answer;
+  print $fh "Вариант ${variant} (ответы)\n";
+  print $fh join( "\n", map { $_->[0] . ". " . $_->[2] } @qas );
+  print $fh "\n" . ( '-' x 80 ) . "\n";
+}

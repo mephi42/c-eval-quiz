@@ -1,0 +1,15 @@
+#!/usr/bin/perl -w
+use strict;
+use warnings;
+use autodie qw( :all );
+
+if ( -e 'q' ) {
+  unlink( 'q' );
+}
+if ( -e 'a' ) {
+  unlink( 'a' );
+}
+
+for( my $i = 1; $i <= 25; $i++ ) {
+  system( './gen-variant', $i, 'q', 'a');
+}
